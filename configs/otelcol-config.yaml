@@ -1,0 +1,33 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+exporters:
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+    timeout: 5s
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+service:
+  pipelines:
+    traces:
+      receivers: ["otlp"]
+      processors: ["memory_limiter", "batch"]
+      exporters: ["debug"]
+    metrics:
+      receivers: ["otlp"]
+      processors: ["memory_limiter", "batch"]
+      exporters: ["debug"]
+    logs/otlp:
+      receivers: ["otlp"]
+      processors: ["memory_limiter", "batch"]
+      exporters: ["debug"]

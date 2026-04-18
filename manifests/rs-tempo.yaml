@@ -1,0 +1,122 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: tempo
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: flux-instance
+      namespace: flux-system
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: victoria-metrics
+      namespace: flux-system
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: HelmRepository
+      metadata:
+        name: tempo
+        namespace: observability
+      spec:
+        interval: 1h
+        type: oci
+        url: oci://ghcr.io/grafana-community/helm-charts
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: tempo
+        namespace: observability
+      spec:
+        interval: 1h
+        releaseName: tempo
+        chart:
+          spec:
+            chart: tempo
+            version: '2.0.*'
+            sourceRef:
+              kind: HelmRepository
+              name: tempo
+            interval: 5m
+        values:
+          tempo:
+            resources:
+              requests:
+                cpu: 200m
+                memory: 128Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            reportingEnabled: true
+            metricsGenerator:
+              enabled: true
+              processor:
+                service_graphs:
+                  wait: 10s
+                  max_items: 10000
+                  dimensions:
+                    - service.name
+                span_metrics:
+                  enable_target_info: true
+                  dimensions:
+                    - service.name
+              storage:
+                path: "/tmp/tempo"
+                # -- Optional remote write configuration (will use remoteWriteUrl if not specified)
+                # Supports full Prometheus remote_write config: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write
+                remote_write:
+                  - url: "http://victoria-metrics-single-server.observability:8428/api/v1/write"
+                    send_exemplars: true
+              # -- Traces storage (WAL) configuration for metrics generator
+              # This configures the Write Ahead Log for traces used by the metrics generator
+              traces_storage:
+                # -- Path for traces storage WAL used by metrics generator
+                path: "/tmp/traces"
+            retention: 24h
+            server:
+              http_listen_port: 3200
+            livenessProbe:
+              httpGet:
+                path: /ready
+                port: 3200
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+              successThreshold: 1
+            readinessProbe:
+              httpGet:
+                path: /ready
+                port: 3200
+              initialDelaySeconds: 20
+              periodSeconds: 10
+              timeoutSeconds: 5
+              failureThreshold: 3
+              successThreshold: 1
+            storage:
+              trace:
+                backend: local
+                local:
+                  path: /tmp/tempo/traces
+                wal:
+                  path: /tmp/tempo/wal
+            receivers:
+              otlp:
+                protocols:
+                  grpc:
+                    endpoint: "0.0.0.0:4317"
+                  http:
+                    endpoint: "0.0.0.0:4318"
+              overrides:
+    # -- Default config values for all tenants, can be overridden by per-tenant overrides. If a tenant's specific overrides are not found in the `per_tenant_overrides` block, the values in this `default` block will be used. Configs inside this block should follow the new overrides indentation format
+            overrides:
+              defaults:
+                metrics_generator:
+                  processors:
+                    - service-graphs
+                    - span-metrics
+          persistence:
+            enabled: true
+            storageClassName: local-path
+            size: 10Gi

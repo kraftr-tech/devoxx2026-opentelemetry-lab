@@ -1,0 +1,78 @@
+services:
+  ui:
+    build:
+      context: .
+      dockerfile: ui/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - users-service
+      - products-service
+      - billing-service
+
+  users-service:
+    build:
+      context: .
+      dockerfile: users-service/Dockerfile
+    ports:
+      - "8001:8001"
+    volumes:
+      - users-data:/data
+
+  products-service:
+    build:
+      context: .
+      dockerfile: products-service/Dockerfile
+    ports:
+      - "8002:8002"
+    volumes:
+      - products-data:/data
+
+  billing-service:
+    build:
+      context: .
+      dockerfile: billing-service/Dockerfile
+    ports:
+      - "8004:8004"
+    volumes:
+      - billing-data:/data
+    depends_on:
+      - users-service
+      - products-service
+      - payment-service
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    volumes:
+      - payments-data:/data
+    ports:
+      - "8003:8003"
+    depends_on:
+      - bank-service
+    environment:
+      - BANK_SERVICE_HOST=bank-service:50051
+
+  bank-service:
+    build:
+      context: .
+      dockerfile: bank-service/Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      - otel-collector
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.150.1
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ./configs/otelcol-config.yaml:/etc/otelcol-contrib/config.yaml
+
+volumes:
+  products-data:
+  payments-data:
+  users-data:
+  billing-data:

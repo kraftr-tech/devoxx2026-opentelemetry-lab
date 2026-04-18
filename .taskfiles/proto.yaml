@@ -1,0 +1,17 @@
+version: "3.0"
+
+tasks:
+  bank:
+    desc: Generate protobuf files for bank-service
+    sources:
+      - proto/transaction.proto
+    generates:
+      - bank-service/pb/transaction.pb.go
+      - bank-service/pb/transaction_grpc.pb.go
+    cmds:
+      - mkdir -p bank-service/pb
+      - |
+        protoc -Iproto \
+          --go_out=bank-service/pb --go_opt=paths=source_relative \
+          --go-grpc_out=bank-service/pb --go-grpc_opt=paths=source_relative \
+          proto/transaction.proto

@@ -1,0 +1,31 @@
+Atelier OpenTelemetry — Devoxx FR 2026
+Copyright (c) 2026 Cédric Moulard / Kraftr
+
+This repository is distributed under a dual licensing model:
+
+1. Source code (services, infrastructure, UI, tests, manifests, scripts)
+   -------------------------------------------------------------------
+   Licensed under the MIT License.
+   See: LICENSE
+
+   This covers everything under:
+     - bank-service/, billing-service/, payment-service/,
+       products-service/, users-service/
+     - ui/
+     - k6/
+     - manifests/, configs/, proto/
+     - Taskfile.yaml, docker-compose.yml, mise.toml
+
+2. Pedagogical content (workshop material)
+   ----------------------------------------
+   Licensed under Creative Commons Attribution-NonCommercial-NoDerivatives
+   4.0 International (CC BY-NC-ND 4.0).
+   See: docs/LICENSE
+
+   This covers everything under:
+     - docs/**
+     - Slides, illustrations, and any training material distributed with
+       the workshop.
+
+For commercial use of the pedagogical content (paid training, derivative
+workshops, translations), contact the copyright holder.

@@ -1,0 +1,42 @@
+version: "3.0"
+
+tasks:
+  default:
+    desc: Build all Docker images
+    deps:
+      - ui
+      - users-service
+      - products-service
+      - payment-service
+      - billing-service
+      - bank-service
+
+  ui:
+    desc: Build UI Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/ui:{{.VERSION}} --platform {{.PLATFORM}} -f ui/Dockerfile .
+
+  users-service:
+    desc: Build users-service Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/users-service:{{.VERSION}} --platform {{.PLATFORM}} -f users-service/Dockerfile .
+
+  products-service:
+    desc: Build products-service Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/products-service:{{.VERSION}} --platform {{.PLATFORM}} -f products-service/Dockerfile .
+
+  payment-service:
+    desc: Build payment-service Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/payment-service:{{.VERSION}} --platform {{.PLATFORM}} -f payment-service/Dockerfile .
+
+  billing-service:
+    desc: Build billing-service Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/billing-service:{{.VERSION}} --platform {{.PLATFORM}} -f billing-service/Dockerfile .
+
+  bank-service:
+    desc: Build bank-service Docker image
+    cmds:
+      - docker build -t {{.LOCAL_REGISTRY}}/bank-service:{{.VERSION}} --platform {{.PLATFORM}} -f bank-service/Dockerfile .

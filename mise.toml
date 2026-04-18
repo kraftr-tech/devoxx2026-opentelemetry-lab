@@ -1,0 +1,22 @@
+[tools]
+task = "3.49"
+go = "1.25"
+node = "24"
+protoc = "25.9"
+"go:google.golang.org/protobuf/cmd/protoc-gen-go" = "latest"
+"go:google.golang.org/grpc/cmd/protoc-gen-go-grpc" = "1.6"
+kustomize = "5.8"
+kubectl = "1.35"
+k3d = "5.8"
+k6 = "1.7"
+helm = "latest"
+kubens = "latest"
+kubectx = "latest"
+
+[env]
+KUBECONFIG="{{config_root}}/kubeconfig.yaml"
+GRAFANA_CLOUD_OTLP_ENDPOINT="https://otlp-gateway-prod-eu-central-0.grafana.net/otlp"
+
+[shell_alias]
+k = "kubectl"
+kz = "kustomize"

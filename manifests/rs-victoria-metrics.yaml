@@ -1,0 +1,58 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: victoria-metrics
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: flux-instance
+      namespace: flux-system
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: observability
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: HelmRepository
+      metadata:
+        name: victoria-metrics
+        namespace: observability
+      spec:
+        interval: 1h
+        url: https://victoriametrics.github.io/helm-charts
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: victoria-metrics-single
+        namespace: observability
+      spec:
+        interval: 1h
+        releaseName: victoria-metrics-single
+        chart:
+          spec:
+            chart: victoria-metrics-single
+            version: '0.34.*'
+            sourceRef:
+              kind: HelmRepository
+              name: victoria-metrics
+            interval: 5m
+        values:
+          server:
+            persistentVolume:
+              enabled: true
+              storageClass: default
+              size: 20Gi
+            resources:
+              limits:
+                cpu: 500m
+                memory: 128Mi
+              requests:
+                cpu: 200m
+                memory: 128Mi
+            retentionPeriod: 15
+          rbac:
+            create: true
+          serviceAccount:
+            create: true

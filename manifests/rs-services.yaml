@@ -1,0 +1,156 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: workshop-resources
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: collector-resources
+      namespace: flux-system
+  inputs:
+    - service: "ui"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 3000
+        annotations: {}
+        envs:
+          DISABLE_HMR: "true"
+          PRODUCTS_SERVICE_URL: "http://products-service:8080"
+          USERS_SERVICE_URL: "http://users-service:8080"
+          PAYMENT_SERVICE_URL: "http://payment-service:8080"
+          BILLING_SERVICE_URL: "http://billing-service:8080"
+    - service: "users-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 8001
+        envs: {}
+        annotations:
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
+    - service: "products-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 8002
+        annotations:
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
+        envs: {}
+    - service: "payment-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 8003
+        annotations:
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
+        envs:
+          BANK_SERVICE_HOST: "bank-service:8080"
+    - service: "billing-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 8004
+        annotations:
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
+        envs:
+          PRODUCTS_SERVICE_URL: "http://products-service:8080"
+          PAYMENT_SERVICE_URL: "http://payment-service:8080"
+    - service: "bank-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 50051
+        annotations: {}
+        envs:
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+    - service: "products-service"
+      app:
+        version: "1.0.0"
+        replicas: 1
+        port: 8080
+        annotations:
+          instrumentation.opentelemetry.io/inject-java: "java-instrumentation"
+
+        envs: {}
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: workshop
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: << inputs.service >>
+        namespace: workshop
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: << inputs.service >>-config
+        namespace: workshop
+      data: << inputs.app.envs | toYaml | nindent 8 >>
+    - apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: << inputs.service >>
+        namespace: workshop
+      spec:
+        replicas: << inputs.app.replicas | int >>
+        selector:
+          matchLabels:
+            app: << inputs.service >>
+        template:
+          metadata:
+            labels:
+              app: << inputs.service >>
+            annotations: << inputs.app.annotations | toYaml | nindent 14 >>
+          spec:
+            serviceAccountName: << inputs.service >>
+            containers:
+              - name: << inputs.service >>
+                image: k3d-workshop-registry:5000/<< inputs.service >>:<< inputs.app.version >>
+                imagePullPolicy: Always
+                ports:
+                  - containerPort: << inputs.app.port | int >>
+                envFrom:
+                  - configMapRef:
+                      name: << inputs.service >>-config
+                resources:
+                  requests:
+                    cpu: 100m
+                    memory: 128Mi
+                  limits:
+                    cpu: 500m
+                    memory: 512Mi
+                volumeMounts:
+                  - name: data
+                    mountPath: /data
+            volumes:
+              - name: data
+                emptyDir: {}
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: << inputs.service >>
+        namespace: workshop
+      spec:
+        selector:
+          app: << inputs.service >>
+        ports:
+          - port: 8080
+            targetPort: << inputs.app.port | int >>
+    - apiVersion: traefik.io/v1alpha1
+      kind: IngressRoute
+      metadata:
+        name: << inputs.service >>
+        namespace: workshop
+      spec:
+        entryPoints:
+          - web
+        routes:
+          - match: Host(`<< inputs.service >>.localhost`)
+            kind: Rule
+            services:
+              - name: << inputs.service >>
+                port: 8080

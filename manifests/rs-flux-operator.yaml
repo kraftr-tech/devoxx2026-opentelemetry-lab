@@ -1,0 +1,55 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: flux-operator
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: flux-instance
+      namespace: flux-system
+  resources:
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: OCIRepository
+      metadata:
+        name: flux-operator
+        namespace: flux-system
+      spec:
+        interval: 10m
+        url: oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator
+        ref:
+          semver: "0.43.x"
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: flux-admin
+      subjects:
+        - kind: Group
+          name: flux-admin
+          apiGroup: rbac.authorization.k8s.io
+      roleRef:
+        kind: ClusterRole
+        name: flux-web-admin
+        apiGroup: rbac.authorization.k8s.io
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: flux-operator
+        namespace: flux-system
+      spec:
+        interval: 1h
+        releaseName: flux-operator
+        chartRef:
+          kind: OCIRepository
+          name: flux-operator
+        values:
+          web:
+            enabled: true
+            config:
+              authentication:
+                type: Anonymous
+                anonymous:
+                  username: flux
+                  groups:
+                    - flux-admin

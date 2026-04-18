@@ -1,0 +1,73 @@
+version: "3.0"
+
+vars:
+  VERSION: "1.0.0"
+  PLATFORM: linux/amd64
+  CLUSTER_NAME: workshop
+  REGISTRY_NAME: workshop-registry
+  REGISTRY_PORT: "5000"
+  REGISTRY: k3d-{{.REGISTRY_NAME}}:{{.REGISTRY_PORT}}
+  LOCAL_REGISTRY: localhost:{{.REGISTRY_PORT}}
+
+includes:
+  cluster:
+    taskfile: ./.taskfiles/cluster.yaml
+    dir: '{{.ROOT_DIR}}'
+    vars:
+      VERSION: '{{.VERSION}}'
+      CLUSTER_NAME: '{{.CLUSTER_NAME}}'
+      REGISTRY_NAME: '{{.REGISTRY_NAME}}'
+      REGISTRY_PORT: '{{.REGISTRY_PORT}}'
+      LOCAL_REGISTRY: '{{.LOCAL_REGISTRY}}'
+  build:
+    taskfile: ./.taskfiles/build.yaml
+    dir: '{{.ROOT_DIR}}'
+    vars:
+      VERSION: '{{.VERSION}}'
+      PLATFORM: '{{.PLATFORM}}'
+      LOCAL_REGISTRY: '{{.LOCAL_REGISTRY}}'
+  stack:
+    taskfile: ./.taskfiles/stack.yaml
+    dir: '{{.ROOT_DIR}}'
+  load:
+    taskfile: ./.taskfiles/load.yaml
+    dir: '{{.ROOT_DIR}}'
+  proto:
+    taskfile: ./.taskfiles/proto.yaml
+    dir: '{{.ROOT_DIR}}'
+
+tasks:
+  default:
+    desc: Show the help
+    silent: true
+    cmds:
+      - task --list
+
+  workshop-fwd-workshop:
+    desc: Expose grafana on this machine with port 3000
+    aliases:
+    - workshop 
+    - w
+    silent: true
+    cmds:
+    - |
+      echo "In the app, use one of these logins :"
+      echo " - admin@atelier.com with password admin123"
+      echo " - julian.reed@atelier.com with password client123"
+      echo "See http://$(hostname).devoxx2026.infrabuilder.io:3000"
+    - kubectl -n workshop port-forward svc/ui --address 0.0.0.0 3000:8080
+
+
+  workshop-fwd-grafana:
+    desc: Expose grafana on this machine with port 3001
+    silent: true 
+    aliases:
+    - grafana
+    - g
+    cmds:
+    - |
+      echo "Authenticate with grafana with :"
+      echo " login.    : $(kubectl view-secret -n observability grafana admin-user)"
+      echo " password  : $(kubectl view-secret -n observability grafana admin-password)"
+      echo "See http://$(hostname).devoxx2026.infrabuilder.io:3001"
+    - kubectl -n observability port-forward svc/grafana --address 0.0.0.0 3001:80

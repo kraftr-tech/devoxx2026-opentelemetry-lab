@@ -1,0 +1,65 @@
+version: "3.0"
+
+tasks:
+  create:
+    desc: Create a local k3d cluster with registry
+    status:
+      - k3d cluster list | grep -q {{.CLUSTER_NAME}}
+    cmds:
+      - k3d registry create {{.REGISTRY_NAME}} --port {{.REGISTRY_PORT}} || true
+      - |
+        k3d cluster create {{.CLUSTER_NAME}} \
+          --registry-use k3d-{{.REGISTRY_NAME}}:{{.REGISTRY_PORT}} \
+          --kubeconfig-update-default=false \
+          --kubeconfig-switch-context=false \
+          --port "8080:80@loadbalancer" \
+          --port "8443:443@loadbalancer" \
+          --wait
+      - k3d kubeconfig get {{.CLUSTER_NAME}} > ./kubeconfig.yaml
+
+  init:
+    desc: Install operators into the cluster
+    deps: [create]
+    cmds:
+      - |
+        helm install flux-operator oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator \
+          --version "0.43.*" \
+          --namespace flux-system --create-namespace \
+          --set web.enabled=true \
+          --set web.config.authentication.type=Anonymous \
+          --set web.config.authentication.anonymous.username=flux \
+          --set "web.config.authentication.anonymous.groups={flux-admin}"
+      - kubectl -n flux-system wait --for=condition=available deployment/flux-operator --timeout=120s
+
+  load:
+    desc: Build and push all Docker images to the registry
+    deps: [":build"]
+    cmds:
+      - docker push {{.LOCAL_REGISTRY}}/ui:{{.VERSION}}
+      - docker push {{.LOCAL_REGISTRY}}/users-service:{{.VERSION}}
+      - docker push {{.LOCAL_REGISTRY}}/products-service:{{.VERSION}}
+      - docker push {{.LOCAL_REGISTRY}}/payment-service:{{.VERSION}}
+      - docker push {{.LOCAL_REGISTRY}}/billing-service:{{.VERSION}}
+      - docker push {{.LOCAL_REGISTRY}}/bank-service:{{.VERSION}}
+
+  apply:
+    desc: Build manifests, substitute Grafana Cloud placeholders, and apply to the cluster
+    requires:
+      vars:
+        - GRAFANA_CLOUD_OTLP_ENDPOINT
+        - GRAFANA_CLOUD_INSTANCE_ID
+        - GRAFANA_CLOUD_API_KEY
+    cmds:
+      - |
+        kustomize build manifests/ \
+          | sed -e "s|__GRAFANA_CLOUD_OTLP_ENDPOINT__|\"${GRAFANA_CLOUD_OTLP_ENDPOINT}\"|g" \
+                -e "s|__GRAFANA_CLOUD_INSTANCE_ID__|\"${GRAFANA_CLOUD_INSTANCE_ID}\"|g" \
+                -e "s|__GRAFANA_CLOUD_API_KEY__|\"${GRAFANA_CLOUD_API_KEY}\"|g" \
+          | kubectl apply -f -
+
+  delete:
+    desc: Delete the k3d cluster and registry
+    cmds:
+      - k3d cluster delete {{.CLUSTER_NAME}}
+      - k3d registry delete k3d-{{.REGISTRY_NAME}} || true
+      - rm -f kubeconfig.yaml

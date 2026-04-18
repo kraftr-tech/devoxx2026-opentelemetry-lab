@@ -1,0 +1,57 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: opentelemetry-operator
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: flux-instance
+      namespace: flux-system
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: cert-manager
+      namespace: flux-system
+  resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: opentelemetry-operator-system
+    - apiVersion: source.toolkit.fluxcd.io/v1
+      kind: HelmRepository
+      metadata:
+        name: opentelemetry
+        namespace: opentelemetry-operator-system
+      spec:
+        interval: 1h
+        url: https://open-telemetry.github.io/opentelemetry-helm-charts
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      metadata:
+        name: opentelemetry-operator
+        namespace: opentelemetry-operator-system
+      spec:
+        interval: 1h
+        releaseName: opentelemetry-operator
+        chart:
+          spec:
+            chart: opentelemetry-operator
+            version: "v0.109.x"
+            sourceRef:
+              kind: HelmRepository
+              name: opentelemetry
+        values:
+          manager:
+            collectorImage:
+              repository: otel/opentelemetry-collector-k8s
+            autoInstrumentation:
+              go:
+                enabled: true
+          admissionWebhooks:
+            certManager:
+              enabled: false
+            autoGenerateCert:
+              enabled: true
+      
+          

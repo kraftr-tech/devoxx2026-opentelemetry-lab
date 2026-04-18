@@ -1,0 +1,25 @@
+version: "3.0"
+
+tasks:
+  client-journey:
+    desc: Run the k6 client journey against the docker compose stack
+    cmds:
+      - task: client-journey:compose
+
+  client-journey:compose:
+    desc: Run the k6 client journey against the docker compose stack (localhost ports)
+    cmds:
+      - |
+        USERS_URL=http://localhost:8001 \
+        PRODUCTS_URL=http://localhost:8002 \
+        BILLING_URL=http://localhost:8004 \
+        k6 run k6/client-journey.js
+
+  client-journey:k3d:
+    desc: Run the k6 client journey against the k3d cluster (Traefik IngressRoutes)
+    cmds:
+      - |
+        USERS_URL=http://users-service.localhost:8080 \
+        PRODUCTS_URL=http://products-service.localhost:8080 \
+        BILLING_URL=http://billing-service.localhost:8080 \
+        k6 run k6/client-journey.js

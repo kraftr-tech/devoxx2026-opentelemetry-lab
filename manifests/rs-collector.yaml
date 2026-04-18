@@ -1,0 +1,107 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: collector-resources
+  namespace: flux-system
+spec:
+  dependsOn:
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: opentelemetry-operator
+      namespace: flux-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: opentelemetry-operator
+      namespace: opentelemetry-operator-system
+      ready: true
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: tempo
+      namespace: flux-system
+    - apiVersion: fluxcd.controlplane.io/v1
+      kind: ResourceSet
+      name: victoria-metrics
+      namespace: flux-system
+  resources:
+    - apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
+      metadata:
+        name: workshop
+        namespace: workshop
+      spec:
+        image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.145.0
+        config:
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+                http:
+                  endpoint: 0.0.0.0:4318
+
+          processors:
+            batch: {}
+            memory_limiter:
+              check_interval: 1s
+              limit_percentage: 75
+              spike_limit_percentage: 15
+
+          exporters:
+            debug:
+              verbosity: detailed
+            otlp/tempo:
+              endpoint: tempo.observability:4317
+              tls:
+                insecure: true
+            prometheusremotewrite:
+              endpoint: http://victoria-metrics-single-server.observability:8428/api/v1/write
+
+          service:
+            pipelines:
+              traces:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [otlp/tempo]
+              metrics:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [prometheusremotewrite]
+              logs:
+                receivers: [otlp]
+                processors: [memory_limiter, batch]
+                exporters: [debug]
+
+    - apiVersion: opentelemetry.io/v1alpha1
+      kind: Instrumentation
+      metadata:
+        name: python-instrumentation
+        namespace: workshop
+      spec:
+        exporter:
+          endpoint: http://workshop-collector:4318
+        env:
+        propagators:
+          - tracecontext
+          - baggage
+        python:
+          env:
+            - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
+              value: 'true'
+            - name: OTEL_PYTHON_TRACES_AUTO_INSTRUMENTATION_ENABLED
+              value: 'true'
+            - name: OTEL_PYTHON_METRICS_AUTO_INSTRUMENTATION_ENABLED
+              value: 'true'
+
+    - apiVersion: opentelemetry.io/v1alpha1
+      kind: Instrumentation
+      metadata:
+        name: go-instrumentation
+        namespace: workshop
+      spec:
+        exporter:
+          endpoint: http://workshop-collector:4318
+        env:
+        propagators:
+          - tracecontext
+          - baggage
+

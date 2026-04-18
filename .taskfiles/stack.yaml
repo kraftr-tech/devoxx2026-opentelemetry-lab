@@ -1,0 +1,17 @@
+version: "3.0"
+
+tasks:
+  up:
+    desc: Start the full compose stack with mise env (Grafana Cloud creds) injected
+    cmds:
+      - mise exec -- docker compose up -d --build {{.CLI_ARGS}}
+
+  down:
+    desc: Stop the compose stack and remove volumes
+    cmds:
+      - mise exec -- docker compose down -v {{.CLI_ARGS}}
+
+  logs:
+    desc: Tail collector logs (use CLI_ARGS to target another service)
+    cmds:
+      - mise exec -- docker compose logs -f {{.CLI_ARGS | default "otel-collector"}}
