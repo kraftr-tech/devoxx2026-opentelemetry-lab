@@ -5,17 +5,16 @@ package main
 
 import (
 	"log/slog"
-	"os"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
 func initLogger() *slog.Logger {
-	return slog.New(
-		slog.NewTextHandler(os.Stderr, nil),
-	)
+	// Bridge stdlib slog → OTel LoggerProvider (configuré dans initOtel).
+	return otelslog.NewLogger("bank-service")
 }
 
-var logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
+var logger = slog.Default()
 
 func setupLogger() {
 	logger = initLogger()

@@ -9,9 +9,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	otellog "go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -54,10 +57,22 @@ func initOtel(ctx context.Context) func() {
 	)
 	otel.SetMeterProvider(mp)
 
+	// Logs — stdout avec batch processor (bridge pour slog via otelslog)
+	logExporter, err := stdoutlog.New()
+	if err != nil {
+		log.Fatalf("failed to create stdout log exporter: %v", err)
+	}
+	lp := sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
+		sdklog.WithResource(res),
+	)
+	otellog.SetLoggerProvider(lp)
+
 	return func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		tp.Shutdown(shutdownCtx)
 		mp.Shutdown(shutdownCtx)
+		lp.Shutdown(shutdownCtx)
 	}
 }

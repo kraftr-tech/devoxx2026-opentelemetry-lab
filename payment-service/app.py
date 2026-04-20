@@ -1,21 +1,28 @@
 # SPDX-FileCopyrightText: 2026 Cédric Moulard / Kraftr
 # SPDX-License-Identifier: MIT
 
+import logging
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.grpc import GrpcInstrumentorClient
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.sqlite3 import SQLite3Instrumentor
 
 from db import init_db, close_db
-from otel import setup_tracing, setup_metrics
+from otel import setup_tracing, setup_metrics, setup_logging
 import service
 
+logger = logging.getLogger("payment")
+
 setup_tracing()
-setup_metrics() 
+setup_metrics()
+setup_logging()
 
 GrpcInstrumentorClient().instrument()
 SQLite3Instrumentor().instrument()
+LoggingInstrumentor().instrument(set_logging_format=True) 
 
 app = Flask(__name__)
 FlaskInstrumentor().instrument_app(app)
@@ -34,6 +41,11 @@ def create_payment():
     data = request.get_json()
     if not data or not data.get("user_id") or data.get("amount") is None:
         return jsonify({"error": "user_id and amount are required"}), 400
+
+    logger.info(
+        "payment_requested",
+        extra={"user_id": data["user_id"], "amount": data["amount"]},
+    )
 
     payment, error = service.process_payment(data["user_id"], data["amount"])
     if error:
