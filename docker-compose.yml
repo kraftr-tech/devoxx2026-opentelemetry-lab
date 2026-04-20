@@ -14,24 +14,40 @@ services:
     build:
       context: .
       dockerfile: users-service/Dockerfile
+    environment:
+      - OTEL_SERVICE_NAME=users-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8001:8001"
     volumes:
       - users-data:/data
+    depends_on:
+      - otel-collector
 
   products-service:
     build:
       context: .
       dockerfile: products-service/Dockerfile
+    environment:
+      - OTEL_SERVICE_NAME=products-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8002:8002"
     volumes:
       - products-data:/data
+    depends_on:
+      - otel-collector
 
   billing-service:
     build:
       context: .
       dockerfile: billing-service/Dockerfile
+    environment:
+      - OTEL_SERVICE_NAME=billing-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "8004:8004"
     volumes:
@@ -40,6 +56,7 @@ services:
       - users-service
       - products-service
       - payment-service
+      - otel-collector
 
   payment-service:
     build:
@@ -51,13 +68,21 @@ services:
       - "8003:8003"
     depends_on:
       - bank-service
+      - otel-collector
     environment:
       - BANK_SERVICE_HOST=bank-service:50051
+      - OTEL_SERVICE_NAME=payment-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
   bank-service:
     build:
       context: .
       dockerfile: bank-service/Dockerfile
+    environment:
+      - OTEL_SERVICE_NAME=bank-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     ports:
       - "50051:50051"
     depends_on:
