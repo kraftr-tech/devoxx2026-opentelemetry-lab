@@ -26,7 +26,8 @@ def close_db(exception=None):
 def init_db(app):
     with app.app_context():
         db = get_db()
-        db.execute(
+        cur = db.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS orders (
                 id TEXT PRIMARY KEY,
@@ -37,7 +38,7 @@ def init_db(app):
             )
             """
         )
-        db.execute(
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS order_items (
                 id TEXT PRIMARY KEY,
@@ -57,29 +58,44 @@ def init_db(app):
 def insert_order(user_id, total, payment_id, items):
     db = get_db()
     order_id = str(uuid.uuid4())
-    db.execute(
+    cur = db.cursor()
+    cur.execute(
         "INSERT INTO orders (id, user_id, total, payment_id) VALUES (?, ?, ?, ?)",
         (order_id, user_id, total, payment_id),
     )
     for item in items:
-        db.execute(
+        cur.execute(
             "INSERT INTO order_items (id, order_id, product_id, product_name, product_image_url, price, quantity) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (str(uuid.uuid4()), order_id, item["product_id"], item["product_name"],
-             item.get("product_image_url", ""), item["price"], item["quantity"]),
+            (
+                str(uuid.uuid4()),
+                order_id,
+                item["product_id"],
+                item["product_name"],
+                item.get("product_image_url", ""),
+                item["price"],
+                item["quantity"],
+            ),
         )
     db.commit()
     return order_id
 
 
 def find_orders_by_user(user_id):
-    return get_db().execute(
-        "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC", (user_id,)
-    ).fetchall()
+    cur = get_db().cursor()
+    cur.execute(
+        "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC",
+        (user_id,),
+    )
+    return cur.fetchall()
 
 
 def find_all_orders():
-    return get_db().execute("SELECT * FROM orders ORDER BY created_at DESC").fetchall()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM orders ORDER BY created_at DESC")
+    return cur.fetchall()
 
 
 def find_order_items(order_id):
-    return get_db().execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,))
+    return cur.fetchall()

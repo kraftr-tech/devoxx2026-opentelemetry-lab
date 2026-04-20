@@ -26,7 +26,8 @@ def close_db(exception=None):
 def init_db(app):
     with app.app_context():
         db = get_db()
-        db.execute(
+        cur = db.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
@@ -46,29 +47,39 @@ def init_db(app):
 
 
 def count_products():
-    return get_db().execute("SELECT COUNT(*) as c FROM products").fetchone()["c"]
+    cur = get_db().cursor()
+    cur.execute("SELECT COUNT(*) as c FROM products")
+    return cur.fetchone()["c"]
 
 
 def insert_product(name, sku, description, price, stock, status, category, image_url):
     product_id = str(uuid.uuid4())
-    get_db().execute(
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
         "INSERT INTO products (id, name, sku, description, price, stock, status, category, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (product_id, name, sku, description, price, stock, status, category, image_url),
     )
-    get_db().commit()
+    db.commit()
     return product_id
 
 
 def find_product_by_id(product_id):
-    return get_db().execute("SELECT * FROM products WHERE id = ?", (product_id,)).fetchone()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM products WHERE id = ?", (product_id,))
+    return cur.fetchone()
 
 
 def list_products(status_filter=None):
+    cur = get_db().cursor()
     if status_filter and status_filter != "all":
-        return get_db().execute(
-            "SELECT * FROM products WHERE status = ? ORDER BY created_at DESC", (status_filter,)
-        ).fetchall()
-    return get_db().execute("SELECT * FROM products ORDER BY created_at DESC").fetchall()
+        cur.execute(
+            "SELECT * FROM products WHERE status = ? ORDER BY created_at DESC",
+            (status_filter,),
+        )
+    else:
+        cur.execute("SELECT * FROM products ORDER BY created_at DESC")
+    return cur.fetchall()
 
 
 def update_product(product_id, **fields):
@@ -76,7 +87,8 @@ def update_product(product_id, **fields):
     if not product:
         return None
     db = get_db()
-    db.execute(
+    cur = db.cursor()
+    cur.execute(
         "UPDATE products SET name=?, description=?, price=?, stock=?, status=?, category=?, image_url=? WHERE id=?",
         (
             fields.get("name", product["name"]),
@@ -95,12 +107,14 @@ def update_product(product_id, **fields):
 
 def delete_product(product_id):
     db = get_db()
-    db.execute("DELETE FROM products WHERE id = ?", (product_id,))
+    cur = db.cursor()
+    cur.execute("DELETE FROM products WHERE id = ?", (product_id,))
     db.commit()
 
 
 def update_stock(product_id, stock):
     db = get_db()
-    db.execute("UPDATE products SET stock=? WHERE id=?", (stock, product_id))
+    cur = db.cursor()
+    cur.execute("UPDATE products SET stock=? WHERE id=?", (stock, product_id))
     db.commit()
     return find_product_by_id(product_id)

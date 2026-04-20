@@ -2,3 +2,9 @@ flask==3.1.1
 flask-cors==5.0.1
 requests==2.32.3
 gunicorn==23.0.0
+
+opentelemetry-api==1.29.0
+opentelemetry-sdk==1.29.0
+opentelemetry-instrumentation-flask==0.50b0
+opentelemetry-instrumentation-requests==0.50b0
+opentelemetry-instrumentation-sqlite3==0.50b0

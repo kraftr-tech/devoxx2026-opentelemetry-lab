@@ -26,7 +26,8 @@ def close_db(exception=None):
 def init_db(app):
     with app.app_context():
         db = get_db()
-        db.execute(
+        cur = db.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS payments (
                 id TEXT PRIMARY KEY,
@@ -44,7 +45,8 @@ def init_db(app):
 def insert_payment(user_id, amount):
     payment_id = str(uuid.uuid4())
     db = get_db()
-    db.execute(
+    cur = db.cursor()
+    cur.execute(
         "INSERT INTO payments (id, user_id, amount, status) VALUES (?, ?, ?, ?)",
         (payment_id, user_id, amount, "pending"),
     )
@@ -54,7 +56,8 @@ def insert_payment(user_id, amount):
 
 def update_payment_status(payment_id, status, transaction_id=None):
     db = get_db()
-    db.execute(
+    cur = db.cursor()
+    cur.execute(
         "UPDATE payments SET status=?, transaction_id=? WHERE id=?",
         (status, transaction_id, payment_id),
     )
@@ -62,8 +65,12 @@ def update_payment_status(payment_id, status, transaction_id=None):
 
 
 def find_payment_by_id(payment_id):
-    return get_db().execute("SELECT * FROM payments WHERE id = ?", (payment_id,)).fetchone()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM payments WHERE id = ?", (payment_id,))
+    return cur.fetchone()
 
 
 def list_all_payments():
-    return get_db().execute("SELECT * FROM payments ORDER BY created_at DESC").fetchall()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM payments ORDER BY created_at DESC")
+    return cur.fetchall()

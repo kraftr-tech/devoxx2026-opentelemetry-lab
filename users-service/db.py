@@ -26,7 +26,8 @@ def close_db(exception=None):
 def init_db(app):
     with app.app_context():
         db = get_db()
-        db.execute(
+        cur = db.cursor()
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
@@ -38,7 +39,7 @@ def init_db(app):
             )
             """
         )
-        db.execute(
+        cur.execute(
             """
             CREATE TABLE IF NOT EXISTS cart_items (
                 id TEXT PRIMARY KEY,
@@ -54,54 +55,69 @@ def init_db(app):
 
 
 def find_user_by_id(user_id):
-    return get_db().execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    return cur.fetchone()
 
 
 def find_user_by_email(email):
-    return get_db().execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM users WHERE email = ?", (email,))
+    return cur.fetchone()
 
 
 def list_all_users():
-    return get_db().execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()
+    cur = get_db().cursor()
+    cur.execute("SELECT * FROM users ORDER BY created_at DESC")
+    return cur.fetchall()
 
 
 def count_users():
-    return get_db().execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+    cur = get_db().cursor()
+    cur.execute("SELECT COUNT(*) as c FROM users")
+    return cur.fetchone()["c"]
 
 
 def insert_user(email, name, password_hash, role="client"):
     user_id = str(uuid.uuid4())
-    get_db().execute(
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
         "INSERT INTO users (id, email, name, password_hash, role) VALUES (?, ?, ?, ?, ?)",
         (user_id, email, name, password_hash, role),
     )
-    get_db().commit()
+    db.commit()
     return user_id
 
 
 def get_cart_items(user_id):
-    return get_db().execute(
+    cur = get_db().cursor()
+    cur.execute(
         "SELECT product_id, quantity FROM cart_items WHERE user_id = ?", (user_id,)
-    ).fetchall()
+    )
+    return cur.fetchall()
 
 
 def find_cart_item(user_id, product_id):
-    return get_db().execute(
+    cur = get_db().cursor()
+    cur.execute(
         "SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ?",
         (user_id, product_id),
-    ).fetchone()
+    )
+    return cur.fetchone()
 
 
 def upsert_cart_item(user_id, product_id, quantity):
     db = get_db()
     existing = find_cart_item(user_id, product_id)
+    cur = db.cursor()
     if existing:
-        db.execute(
+        cur.execute(
             "UPDATE cart_items SET quantity = ? WHERE id = ?",
             (existing["quantity"] + quantity, existing["id"]),
         )
     else:
-        db.execute(
+        cur.execute(
             "INSERT INTO cart_items (id, user_id, product_id, quantity) VALUES (?, ?, ?, ?)",
             (str(uuid.uuid4()), user_id, product_id, quantity),
         )
@@ -110,10 +126,14 @@ def upsert_cart_item(user_id, product_id, quantity):
 
 def update_cart_item_quantity(user_id, product_id, quantity):
     db = get_db()
+    cur = db.cursor()
     if quantity <= 0:
-        db.execute("DELETE FROM cart_items WHERE user_id = ? AND product_id = ?", (user_id, product_id))
+        cur.execute(
+            "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?",
+            (user_id, product_id),
+        )
     else:
-        db.execute(
+        cur.execute(
             "UPDATE cart_items SET quantity = ? WHERE user_id = ? AND product_id = ?",
             (quantity, user_id, product_id),
         )
@@ -122,11 +142,16 @@ def update_cart_item_quantity(user_id, product_id, quantity):
 
 def delete_cart_item(user_id, product_id):
     db = get_db()
-    db.execute("DELETE FROM cart_items WHERE user_id = ? AND product_id = ?", (user_id, product_id))
+    cur = db.cursor()
+    cur.execute(
+        "DELETE FROM cart_items WHERE user_id = ? AND product_id = ?",
+        (user_id, product_id),
+    )
     db.commit()
 
 
 def clear_cart_items(user_id):
     db = get_db()
-    db.execute("DELETE FROM cart_items WHERE user_id = ?", (user_id,))
+    cur = db.cursor()
+    cur.execute("DELETE FROM cart_items WHERE user_id = ?", (user_id,))
     db.commit()

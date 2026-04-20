@@ -5,14 +5,23 @@ import logging
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from opentelemetry.instrumentation.flask import FlaskInstrumentor
+from opentelemetry.instrumentation.sqlite3 import SQLite3Instrumentor
 
 from db import init_db, close_db
+from otel import setup_tracing
 import service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("products")
 
+setup_tracing()
+
+SQLite3Instrumentor().instrument()
+
 app = Flask(__name__)
+FlaskInstrumentor().instrument_app(app)
+
 CORS(app)
 app.teardown_appcontext(close_db)
 
