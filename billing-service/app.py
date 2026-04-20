@@ -8,10 +8,11 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlite3 import SQLite3Instrumentor
 
 from db import init_db, close_db
-from otel import setup_tracing
+from otel import setup_tracing, setup_metrics
 import service
 
 setup_tracing()
+setup_metrics()
 
 RequestsInstrumentor().instrument()
 SQLite3Instrumentor().instrument()
