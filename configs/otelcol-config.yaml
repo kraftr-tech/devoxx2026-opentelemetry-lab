@@ -8,6 +8,10 @@ receivers:
 exporters:
   debug:
     verbosity: detailed
+  otlphttp/grafana_cloud:
+    endpoint: "${env:GRAFANA_CLOUD_OTLP_ENDPOINT}"
+    auth:
+      authenticator: basicauth/grafana_cloud
 
 processors:
   batch:
@@ -16,18 +20,30 @@ processors:
     check_interval: 5s
     limit_percentage: 80
     spike_limit_percentage: 25
+  resource/student:
+    attributes:
+      - key: student.id
+        value: "john.doe"
+        action: upsert
+
+extensions:
+  basicauth/grafana_cloud:
+    client_auth:
+      username: "${env:GRAFANA_CLOUD_INSTANCE_ID}"
+      password: "${env:GRAFANA_CLOUD_API_KEY}"
 
 service:
+  extensions: ["basicauth/grafana_cloud"]
   pipelines:
     traces:
       receivers: ["otlp"]
-      processors: ["memory_limiter", "batch"]
-      exporters: ["debug"]
+      processors: ["memory_limiter", "resource/student", "batch"]
+      exporters: ["otlphttp/grafana_cloud"]
     metrics:
       receivers: ["otlp"]
-      processors: ["memory_limiter", "batch"]
-      exporters: ["debug"]
+      processors: ["memory_limiter", "resource/student", "batch"]
+      exporters: ["otlphttp/grafana_cloud"]
     logs/otlp:
       receivers: ["otlp"]
-      processors: ["memory_limiter", "batch"]
-      exporters: ["debug"]
+      processors: ["memory_limiter", "resource/student", "batch"]
+      exporters: ["otlphttp/grafana_cloud"]
