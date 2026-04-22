@@ -27,7 +27,9 @@ spec:
         version: "1.0.0"
         replicas: 1
         port: 8001
-        envs: {}
+        envs:
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
         annotations:
           instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
     - service: "products-service"
@@ -37,7 +39,9 @@ spec:
         port: 8002
         annotations:
           instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
-        envs: {}
+        envs:
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
     - service: "payment-service"
       app:
         version: "1.0.0"
@@ -47,6 +51,8 @@ spec:
           instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
         envs:
           BANK_SERVICE_HOST: "bank-service:8080"
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
     - service: "billing-service"
       app:
         version: "1.0.0"
@@ -57,6 +63,8 @@ spec:
         envs:
           PRODUCTS_SERVICE_URL: "http://products-service:8080"
           PAYMENT_SERVICE_URL: "http://payment-service:8080"
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
     - service: "bank-service"
       app:
         version: "1.0.0"
@@ -65,15 +73,17 @@ spec:
         annotations: {}
         envs:
           OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
     - service: "products-service"
       app:
         version: "1.0.0"
         replicas: 1
         port: 8080
         annotations:
-          instrumentation.opentelemetry.io/inject-java: "java-instrumentation"
-
-        envs: {}
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
+        envs:
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+          OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
   resources:
     - apiVersion: v1
       kind: Namespace

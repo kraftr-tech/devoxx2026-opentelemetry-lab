@@ -24,6 +24,7 @@ func (h *transactionHandler) ProcessTransaction(ctx context.Context, req *pb.Tra
 	logger.InfoContext(ctx, "Transaction completed",
 		"transaction_id", result.TransactionID,
 		"status", result.Status,
+		"decline_reason", result.DeclineReason,
 	)
 
 	return &pb.TransactionResponse{
@@ -33,5 +34,6 @@ func (h *transactionHandler) ProcessTransaction(ctx context.Context, req *pb.Tra
 		Amount:        result.Amount,
 		Status:        result.Status,
 		CreatedAt:     result.CreatedAt,
+		DeclineReason: result.DeclineReason,
 	}, nil
 }

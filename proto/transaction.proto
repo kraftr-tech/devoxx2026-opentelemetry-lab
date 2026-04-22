@@ -20,4 +20,5 @@ message TransactionResponse {
   double amount = 4;
   string status = 5;
   string created_at = 6;
+  string decline_reason = 7;
 }

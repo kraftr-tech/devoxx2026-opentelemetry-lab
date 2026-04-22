@@ -23,6 +23,17 @@ spec:
       name: victoria-metrics
       namespace: flux-system
   resources:
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: grafana-cloud
+        namespace: workshop
+      type: Opaque
+      stringData:
+        GRAFANA_CLOUD_OTLP_ENDPOINT: "__GRAFANA_CLOUD_OTLP_ENDPOINT__"
+        GRAFANA_CLOUD_INSTANCE_ID: "__GRAFANA_CLOUD_INSTANCE_ID__"
+        GRAFANA_CLOUD_API_KEY: "__GRAFANA_CLOUD_API_KEY__"
+
     - apiVersion: opentelemetry.io/v1beta1
       kind: OpenTelemetryCollector
       metadata:
@@ -71,37 +82,51 @@ spec:
                 processors: [memory_limiter, batch]
                 exporters: [debug]
 
-    - apiVersion: opentelemetry.io/v1alpha1
-      kind: Instrumentation
+    - apiVersion: opentelemetry.io/v1beta1
+      kind: OpenTelemetryCollector
       metadata:
-        name: python-instrumentation
+        name: logs-daemonset
         namespace: workshop
       spec:
-        exporter:
-          endpoint: http://workshop-collector:4318
-        env:
-        propagators:
-          - tracecontext
-          - baggage
-        python:
-          env:
-            - name: OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED
-              value: 'true'
-            - name: OTEL_PYTHON_TRACES_AUTO_INSTRUMENTATION_ENABLED
-              value: 'true'
-            - name: OTEL_PYTHON_METRICS_AUTO_INSTRUMENTATION_ENABLED
-              value: 'true'
+        mode: daemonset
+        image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.145.0
+        volumeMounts:
+          - name: varlogpods
+            mountPath: /var/log/pods
+            readOnly: true
+        volumes:
+          - name: varlogpods
+            hostPath:
+              path: /var/log/pods
+        config:
+          receivers:
+            filelog:
+              # Ne collecte que les pods du namespace 'observability'.
+              # Chemin kubelet : /var/log/pods/<namespace>_<pod>_<uid>/<container>/<attempt>.log
+              include: ["/var/log/pods/observability_*/*/*.log"]
+              start_at: end
+              include_file_path: false
+              include_file_name: false
+              operators:
+                - type: container
+                  id: container-parser
+                  max_log_size: 102400
 
-    - apiVersion: opentelemetry.io/v1alpha1
-      kind: Instrumentation
-      metadata:
-        name: go-instrumentation
-        namespace: workshop
-      spec:
-        exporter:
-          endpoint: http://workshop-collector:4318
-        env:
-        propagators:
-          - tracecontext
-          - baggage
+          processors:
+            batch: {}
+            memory_limiter:
+              check_interval: 1s
+              limit_percentage: 75
+              spike_limit_percentage: 15
+
+          exporters:
+            debug:
+              verbosity: detailed
+
+          service:
+            pipelines:
+              logs:
+                receivers: [filelog]
+                processors: [memory_limiter, batch]
+                exporters: [debug]
 

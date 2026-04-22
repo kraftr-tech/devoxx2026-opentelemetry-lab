@@ -41,13 +41,26 @@ def summary():
 
 @app.route("/checkout", methods=["POST"])
 def checkout():
+    from opentelemetry import trace
+
     data = request.get_json()
     if not data or not data.get("user_id") or not data.get("items"):
         return jsonify({"error": "user_id and items are required"}), 400
 
+    span = trace.get_current_span()
+    span.set_attribute("user.id", str(data["user_id"]))
+    span.set_attribute("cart.item_count", sum(i.get("quantity", 0) for i in data["items"]))
+    span.set_attribute("order.currency", "EUR")
+
     result, error, status_code = service.checkout(data["user_id"], data["items"])
+
     if error:
+        outcome = {402: "payment_declined", 502: "payment_declined", 409: "validation_failed"}.get(status_code, "error")
+        span.set_attribute("checkout.outcome", outcome)
         return jsonify(error), status_code
+
+    span.set_attribute("checkout.outcome", "success")
+    span.set_attribute("order.total", result["total"])
     return jsonify(result), status_code
 
 

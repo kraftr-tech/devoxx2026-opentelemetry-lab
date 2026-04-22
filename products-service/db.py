@@ -118,3 +118,30 @@ def update_stock(product_id, stock):
     cur.execute("UPDATE products SET stock=? WHERE id=?", (stock, product_id))
     db.commit()
     return find_product_by_id(product_id)
+
+
+def list_stock_for_gauge():
+    """Return [(product_id, stock), ...] for all products.
+
+    Opens its own SQLite connection — safe to call outside a Flask request
+    context (e.g. from OTel metric callback threads).
+    """
+    conn = sqlite3.connect(DATABASE)
+    try:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT id, stock FROM products")
+        return [(row["id"], row["stock"]) for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def list_product_info():
+    conn = sqlite3.connect(DATABASE)
+    try:
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT id, name, category FROM products")
+        return [dict(row) for row in cur.fetchall()]
+    finally:
+        conn.close()

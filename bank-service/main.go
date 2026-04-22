@@ -22,6 +22,8 @@ func main() {
 	shutdown := initOtel(ctx)
 	defer shutdown()
 
+	initInstruments()
+
 	port := ":50051"
 	lis, err := net.Listen("tcp", port)
 	if err != nil {

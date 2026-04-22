@@ -23,8 +23,13 @@ processors:
   resource/student:
     attributes:
       - key: student.id
-        value: "john.doe"
+        value: "kraftr"
         action: upsert
+  transform/student_metrics:
+    metric_statements:
+      - context: datapoint
+        statements:
+          - set(attributes["student.id"], "kraftr")
 
 extensions:
   basicauth/grafana_cloud:
@@ -41,7 +46,7 @@ service:
       exporters: ["otlphttp/grafana_cloud"]
     metrics:
       receivers: ["otlp"]
-      processors: ["memory_limiter", "resource/student", "batch"]
+      processors: ["memory_limiter", "resource/student", "transform/student_metrics", "batch"]
       exporters: ["otlphttp/grafana_cloud"]
     logs/otlp:
       receivers: ["otlp"]

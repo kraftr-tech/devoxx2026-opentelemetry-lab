@@ -2,16 +2,42 @@
 # SPDX-License-Identifier: MIT
 
 import os
+import time
+from contextlib import contextmanager
 
 import requests
+from opentelemetry.trace import Status, StatusCode
 
 from db import insert_order, find_orders_by_user, find_all_orders, find_order_items
+from instruments import (
+    CHECKOUT_OPERATIONS,
+    CHECKOUT_ORDER_AMOUNT,
+    CHECKOUT_STEP_DURATION,
+    PRODUCT_SALES,
+    tracer,
+)
 
 PRODUCTS_SERVICE_URL = os.environ.get("PRODUCTS_SERVICE_URL", "http://products-service:8002")
 PAYMENT_SERVICE_URL = os.environ.get("PAYMENT_SERVICE_URL", "http://payment-service:8003")
 
 SHIPPING_COST = 25.0
 TAX_RATE = 0.2
+
+
+@contextmanager
+def _timed_step(span_name, step_label):
+    """Wrap a checkout step with a child span and record step duration."""
+    start = time.perf_counter()
+    with tracer.start_as_current_span(span_name) as span:
+        try:
+            yield
+        except Exception as e:
+            span.record_exception(e)
+            span.set_status(Status(StatusCode.ERROR, str(e)))
+            raise
+        finally:
+            elapsed = time.perf_counter() - start
+            CHECKOUT_STEP_DURATION.record(elapsed, {"checkout.step": step_label})
 
 
 def compute_summary(items):
@@ -109,34 +135,54 @@ def create_order(user_id, total, payment_id, validated_items):
 
 
 def checkout(user_id, cart_items):
-    validated, errors = validate_products(cart_items)
-    if errors:
-        return None, {"error": "checkout validation failed", "details": errors}, 409
+    outcome = "error"
+    total = 0.0
+    try:
+        with _timed_step("checkout.validate_products", "validate"):
+            validated, errors = validate_products(cart_items)
 
-    subtotal = sum(e["product"]["price"] * e["quantity"] for e in validated)
-    tax = round(subtotal * TAX_RATE, 2)
-    total = round(subtotal + SHIPPING_COST + tax, 2)
+        if errors:
+            outcome = "validation_failed"
+            return None, {"error": "checkout validation failed", "details": errors}, 409
 
-    pay_data, pay_error = process_payment(user_id, total)
-    if pay_error:
-        status = 502 if pay_error == "payment service unavailable" else 402
-        error_detail = {
-            "error": pay_error,
-            "payment_id": pay_data.get("payment_id") or pay_data.get("id") if pay_data else None,
-            "details": pay_data.get("error", "The bank declined the transaction") if pay_data else pay_error,
-        }
-        return None, error_detail, status
+        subtotal = sum(e["product"]["price"] * e["quantity"] for e in validated)
+        tax = round(subtotal * TAX_RATE, 2)
+        total = round(subtotal + SHIPPING_COST + tax, 2)
 
-    update_stock(validated)
-    order_id = create_order(user_id, total, pay_data.get("id"), validated)
+        with _timed_step("checkout.process_payment", "payment"):
+            pay_data, pay_error = process_payment(user_id, total)
 
-    return {
-        "status": "ok",
-        "order_id": order_id,
-        "payment_id": pay_data.get("id"),
-        "total": total,
-        "items": len(validated),
-    }, None, 200
+        if pay_error:
+            outcome = "payment_declined"
+            status = 502 if pay_error == "payment service unavailable" else 402
+            error_detail = {
+                "error": pay_error,
+                "payment_id": pay_data.get("payment_id") or pay_data.get("id") if pay_data else None,
+                "details": pay_data.get("error", "The bank declined the transaction") if pay_data else pay_error,
+            }
+            return None, error_detail, status
+
+        with _timed_step("checkout.update_stock", "stock"):
+            update_stock(validated)
+
+        with _timed_step("checkout.persist_order", "persist"):
+            order_id = create_order(user_id, total, pay_data.get("id"), validated)
+
+        outcome = "success"
+        CHECKOUT_ORDER_AMOUNT.record(total)
+        for entry in validated:
+            PRODUCT_SALES.add(entry["quantity"], {"product.id": entry["product"]["id"]})
+
+        return {
+            "status": "ok",
+            "order_id": order_id,
+            "payment_id": pay_data.get("id"),
+            "total": total,
+            "items": len(validated),
+        }, None, 200
+
+    finally:
+        CHECKOUT_OPERATIONS.add(1, {"checkout.outcome": outcome})
 
 
 def get_user_orders(user_id):

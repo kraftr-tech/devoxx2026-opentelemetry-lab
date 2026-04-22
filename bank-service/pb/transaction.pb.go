@@ -81,6 +81,7 @@ type TransactionResponse struct {
 	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	CreatedAt     string                 `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	DeclineReason string                 `protobuf:"bytes,7,opt,name=decline_reason,json=declineReason,proto3" json:"decline_reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -157,6 +158,13 @@ func (x *TransactionResponse) GetCreatedAt() string {
 	return ""
 }
 
+func (x *TransactionResponse) GetDeclineReason() string {
+	if x != nil {
+		return x.DeclineReason
+	}
+	return ""
+}
+
 var File_transaction_proto protoreflect.FileDescriptor
 
 const file_transaction_proto_rawDesc = "" +
@@ -165,7 +173,7 @@ const file_transaction_proto_rawDesc = "" +
 	"\x12TransactionRequest\x12\x1f\n" +
 	"\vmerchant_id\x18\x01 \x01(\tR\n" +
 	"merchantId\x12\x16\n" +
-	"\x06amount\x18\x02 \x01(\x01R\x06amount\"\xbc\x01\n" +
+	"\x06amount\x18\x02 \x01(\x01R\x06amount\"\xe3\x01\n" +
 	"\x13TransactionResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12%\n" +
 	"\x0etransaction_id\x18\x02 \x01(\tR\rtransactionId\x12\x1f\n" +
@@ -174,7 +182,8 @@ const file_transaction_proto_rawDesc = "" +
 	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12\x16\n" +
 	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\tR\tcreatedAt2m\n" +
+	"created_at\x18\x06 \x01(\tR\tcreatedAt\x12%\n" +
+	"\x0edecline_reason\x18\a \x01(\tR\rdeclineReason2m\n" +
 	"\x12TransactionService\x12W\n" +
 	"\x12ProcessTransaction\x12\x1f.transaction.TransactionRequest\x1a .transaction.TransactionResponseB\x11Z\x0fbank-service/pbb\x06proto3"
 

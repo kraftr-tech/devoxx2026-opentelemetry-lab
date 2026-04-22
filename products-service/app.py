@@ -118,6 +118,9 @@ init_db(app)
 with app.app_context():
     service.seed_products()
 
+# Must stay below seed_products() so the first export tick observes a populated table.
+import instruments  # noqa: F401,E402  -- registers product.stock gauge
+
 logger.info("service_started", extra={"port": 8002})
 
 
