@@ -5,8 +5,10 @@ package main
 
 import (
 	"context"
+	"log"
 
 	pb "bank-service/pb"
+	"google.golang.org/grpc/metadata"
 )
 
 type transactionHandler struct {
@@ -18,6 +20,10 @@ func (h *transactionHandler) ProcessTransaction(ctx context.Context, req *pb.Tra
 		"merchant_id", req.MerchantId,
 		"amount", req.Amount,
 	)
+
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+        log.Printf("incoming metadata: %v", md)
+    }
 
 	result := ProcessTransaction(ctx, req.MerchantId, req.Amount)
 

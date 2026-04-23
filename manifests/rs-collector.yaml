@@ -14,15 +14,18 @@ spec:
       name: opentelemetry-operator
       namespace: opentelemetry-operator-system
       ready: true
-    - apiVersion: fluxcd.controlplane.io/v1
-      kind: ResourceSet
-      name: tempo
-      namespace: flux-system
-    - apiVersion: fluxcd.controlplane.io/v1
-      kind: ResourceSet
-      name: victoria-metrics
-      namespace: flux-system
   resources:
+    - apiVersion: v1
+      kind: Secret
+      metadata:
+        name: grafana-cloud
+        namespace: workshop
+      type: Opaque
+      stringData:
+        GRAFANA_CLOUD_OTLP_ENDPOINT: "__GRAFANA_CLOUD_OTLP_ENDPOINT__"
+        GRAFANA_CLOUD_INSTANCE_ID: "__GRAFANA_CLOUD_INSTANCE_ID__"
+        GRAFANA_CLOUD_API_KEY: "__GRAFANA_CLOUD_API_KEY__"
+
     - apiVersion: opentelemetry.io/v1beta1
       kind: OpenTelemetryCollector
       metadata:
@@ -30,7 +33,16 @@ spec:
         namespace: workshop
       spec:
         image: ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib:0.145.0
+        envFrom:
+          - secretRef:
+              name: grafana-cloud
         config:
+          extensions:
+            basicauth/grafana_cloud:
+              client_auth:
+                username: "${env:GRAFANA_CLOUD_INSTANCE_ID}"
+                password: "${env:GRAFANA_CLOUD_API_KEY}"
+
           receivers:
             otlp:
               protocols:
@@ -49,27 +61,26 @@ spec:
           exporters:
             debug:
               verbosity: detailed
-            otlp/tempo:
-              endpoint: tempo.observability:4317
-              tls:
-                insecure: true
-            prometheusremotewrite:
-              endpoint: http://victoria-metrics-single-server.observability:8428/api/v1/write
+            otlphttp/grafana_cloud:
+              endpoint: "${env:GRAFANA_CLOUD_OTLP_ENDPOINT}"
+              auth:
+                authenticator: basicauth/grafana_cloud
 
           service:
+            extensions: [basicauth/grafana_cloud]
             pipelines:
               traces:
                 receivers: [otlp]
                 processors: [memory_limiter, batch]
-                exporters: [otlp/tempo]
+                exporters: [otlphttp/grafana_cloud]
               metrics:
                 receivers: [otlp]
                 processors: [memory_limiter, batch]
-                exporters: [prometheusremotewrite]
+                exporters: [otlphttp/grafana_cloud]
               logs:
                 receivers: [otlp]
                 processors: [memory_limiter, batch]
-                exporters: [debug]
+                exporters: [debug, otlphttp/grafana_cloud]
 
     - apiVersion: opentelemetry.io/v1alpha1
       kind: Instrumentation
@@ -99,9 +110,14 @@ spec:
         namespace: workshop
       spec:
         exporter:
-          endpoint: http://workshop-collector:4318
+          endpoint: http://workshop-collector:4317
         env:
+          - name: OTEL_EXPORTER_OTLP_PROTOCOL
+            value: grpc
+          - name: OTEL_TRACES_EXPORTER
+            value: otlp
+          - name: OTEL_LOG_LEVEL
+            value: debug
         propagators:
           - tracecontext
           - baggage
-

@@ -62,16 +62,17 @@ spec:
         version: "1.0.0"
         replicas: 1
         port: 50051
-        annotations: {}
-        envs:
-          OTEL_EXPORTER_OTLP_ENDPOINT: "http://workshop-collector:4318"
+        annotations:
+          instrumentation.opentelemetry.io/inject-go: "go-instrumentation"
+          instrumentation.opentelemetry.io/otel-go-auto-target-exe: "/bank-service"
+        envs: {}
     - service: "products-service"
       app:
         version: "1.0.0"
         replicas: 1
         port: 8080
         annotations:
-          instrumentation.opentelemetry.io/inject-java: "java-instrumentation"
+          instrumentation.opentelemetry.io/inject-python: "python-instrumentation"
 
         envs: {}
   resources:

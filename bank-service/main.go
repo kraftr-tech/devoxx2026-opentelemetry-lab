@@ -10,7 +10,6 @@ import (
 
 	pb "bank-service/pb"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -19,18 +18,13 @@ func main() {
 
 	setupLogger()
 
-	shutdown := initOtel(ctx)
-	defer shutdown()
-
 	port := ":50051"
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-	)
+	s := grpc.NewServer()
 	pb.RegisterTransactionServiceServer(s, &transactionHandler{})
 
 	logger.InfoContext(ctx, "Bank service started", "port", port)

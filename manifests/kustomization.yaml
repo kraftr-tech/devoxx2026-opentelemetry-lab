@@ -8,6 +8,3 @@ resources:
   - rs-opentelemtry-operator.yaml
   - rs-services.yaml
   - rs-collector.yaml
-  - rs-victoria-metrics.yaml
-  - rs-tempo.yaml
-  - rs-grafana.yaml
