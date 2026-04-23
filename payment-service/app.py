@@ -12,6 +12,7 @@ from opentelemetry.instrumentation.sqlite3 import SQLite3Instrumentor
 
 from db import init_db, close_db
 from otel import setup_tracing, setup_metrics, setup_logging
+import chaos
 import service
 
 logger = logging.getLogger("payment")
@@ -26,6 +27,7 @@ LoggingInstrumentor().instrument(set_logging_format=True)
 
 app = Flask(__name__)
 FlaskInstrumentor().instrument_app(app)
+chaos.install(app)
 
 CORS(app)
 app.teardown_appcontext(close_db)

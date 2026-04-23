@@ -10,7 +10,6 @@ UI (React/Vite)
 ├── /api/products  → products-service    (Python/Flask)
 └── /api/billing   → billing-service     (Python/Flask)
                       ├── products-service   (HTTP - validation/décrément stock)
-                      ├── users-service      (HTTP - récupération panier/user)
                       └── payment-service    (Python/Flask)
                             └── bank-service (Go/gRPC)
 ```

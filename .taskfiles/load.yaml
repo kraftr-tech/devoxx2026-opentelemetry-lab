@@ -23,3 +23,12 @@ tasks:
         PRODUCTS_URL=http://products-service.localhost:8080 \
         BILLING_URL=http://billing-service.localhost:8080 \
         k6 run k6/client-journey.js
+
+  client-journey-realistic:
+    desc: Run the k6 client journey against the docker compose stack (localhost ports)
+    cmds:
+      - |
+        USERS_URL=http://localhost:8001 \
+        PRODUCTS_URL=http://localhost:8002 \
+        BILLING_URL=http://localhost:8004 \
+        k6 run k6/client-journey-realistic.js

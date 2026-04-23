@@ -32,6 +32,7 @@ func main() {
 
 	s := grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.UnaryInterceptor(chaosUnaryInterceptor(loadChaosConfig())),
 	)
 	pb.RegisterTransactionServiceServer(s, &transactionHandler{})
 

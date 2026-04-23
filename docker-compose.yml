@@ -18,6 +18,7 @@ services:
       - OTEL_SERVICE_NAME=users-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SEMCONV_STABILITY_OPT_IN=http
     ports:
       - "8001:8001"
     volumes:
@@ -33,6 +34,7 @@ services:
       - OTEL_SERVICE_NAME=products-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SEMCONV_STABILITY_OPT_IN=http
     ports:
       - "8002:8002"
     volumes:
@@ -48,6 +50,7 @@ services:
       - OTEL_SERVICE_NAME=billing-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SEMCONV_STABILITY_OPT_IN=http
     ports:
       - "8004:8004"
     volumes:
@@ -74,6 +77,11 @@ services:
       - OTEL_SERVICE_NAME=payment-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SEMCONV_STABILITY_OPT_IN=http
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_PROBABILITY=${CHAOS_PROBABILITY:-0.3}
+      - CHAOS_LATENCY_MAX_MS=${CHAOS_LATENCY_MAX_MS:-800}
+      - CHAOS_ERROR_PROBABILITY=${CHAOS_ERROR_PROBABILITY:-0.05}
 
   bank-service:
     build:
@@ -83,6 +91,10 @@ services:
       - OTEL_SERVICE_NAME=bank-service
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
+      - CHAOS_PROBABILITY=${CHAOS_PROBABILITY:-0.3}
+      - CHAOS_LATENCY_MAX_MS=${CHAOS_LATENCY_MAX_MS:-800}
+      - CHAOS_ERROR_PROBABILITY=${CHAOS_ERROR_PROBABILITY:-0.05}
     ports:
       - "50051:50051"
     depends_on:

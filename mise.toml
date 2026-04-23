@@ -16,6 +16,11 @@ kubectx = "latest"
 [env]
 KUBECONFIG="{{config_root}}/kubeconfig.yaml"
 GRAFANA_CLOUD_OTLP_ENDPOINT="https://otlp-gateway-prod-eu-central-0.grafana.net/otlp"
+CHAOS_ENABLED="false"
+CHAOS_PROBABILITY="0.3"
+CHAOS_LATENCY_MAX_MS="2000"
+CHAOS_ERROR_PROBABILITY="0.5"
+
 
 [shell_alias]
 k = "kubectl"
